@@ -1,5 +1,7 @@
 package ru.scit.seti;
 
+import jade.gui.GuiEvent;
+
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -34,8 +36,11 @@ public class MainFrame extends JFrame implements ActionListener {
 	JButton submit;
 	
 	Process proc;
+    MainAgent agent;
 	
-	public MainFrame() {
+	public MainFrame(MainAgent agent) {
+        super();
+        this.agent = agent;
 		//Setting up the frame
 		setTitle("Main");
 		setSize(500, 200);
@@ -83,55 +88,27 @@ public class MainFrame extends JFrame implements ActionListener {
 	    validate();
 	}
 	
-	public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-            	MainFrame mf = new MainFrame();
-                mf.setVisible(true);
-            }
-        });
-    }
-
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
-		//Seting the outputPanel active
-		setContentPane(outputPanel);
-		invalidate();
-		validate();
-		try {
-			htmlToFb2ConvertRequest();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        ConvertParamsHolder cph = new ConvertParamsHolder(
+                inputUrl.getText(),
+                withTables.isSelected(),
+                withImages.isSelected());
+
+        GuiEvent ge = new GuiEvent(null, MainAgent.CONVERT);
+        ge.addParameter(cph);
+        agent.postGuiEvent(ge);
 	}
-	
-	//Html to fb2 convertation func
-	private void htmlToFb2ConvertRequest() throws IOException {
-		String args = "";
-		
-		//Setting withImage param
-		if(withImages.isSelected()) {
-			args += " -i 1";
-		}
-		//Setting withTables param
-		if(withTables.isSelected()) {
-			args += " -t 1";
-		}
-		//Setting url param
-		args += " -u " + inputUrl.getText();
-				
-		//Launching script
-		Runtime rt = Runtime.getRuntime();
-		proc = rt.exec("./script.sh" + args);
-		
-		htmlToFb2ConvertResponce();
-	}
-	
-	private void htmlToFb2ConvertResponce() throws IOException {
-		BufferedReader stdInput = new BufferedReader(new 
-	             InputStreamReader(proc.getInputStream()));
-		
-		String url = stdInput.readLine();
-        outputUrl.setText(url);
-	}
+
+    public void onAgentResponse(String response) {
+        setContentPane(outputPanel);
+        invalidate();
+        validate();
+
+        if(response != null) {
+            outputUrl.setText(response);
+        } else {
+            infoLabel.setText("Ошибка конвертации");
+        }
+    }
 }
